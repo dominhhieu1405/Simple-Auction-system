@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	_ "simple-auction-system/docs"
 	"simple-auction-system/internal/config"
 	"simple-auction-system/internal/handlers"
 	"simple-auction-system/internal/middleware"
@@ -17,8 +18,19 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
+
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
+// @title Simple Auction System API
+// @version 1.0
+// @description REST API cho hệ thống đấu giá đơn giản
+// @host localhost:8080
+// @BasePath /api
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	_ = godotenv.Load()
 	cfg := config.Load()
@@ -57,6 +69,13 @@ func main() {
 
 	// 4. Khởi tạo Router (Sử dụng ServeMux chuẩn của Go 1.22+)
 	mux := http.NewServeMux()
+	// docs
+	mux.Handle(
+		"/docs/",
+		httpSwagger.Handler(
+			httpSwagger.URL("/docs/doc.json"),
+		),
+	)
 
 	// Đăng ký các endpoints
 	mux.HandleFunc("POST /api/auth/register", authHandler.Register)
@@ -73,6 +92,10 @@ func main() {
 		middleware.RequireAuth(authService)(
 			http.HandlerFunc(auctionHandler.CreateAuction),
 		),
+	)
+	mux.HandleFunc(
+		"GET /api/auctions",
+		auctionHandler.GetAllAuctions,
 	)
 
 	// 5. Khởi chạy Server

@@ -22,6 +22,18 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
+// Register đăng ký tài khoản mới.
+//
+// @Summary Đăng ký tài khoản
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body AuthRequest true "Thông tin đăng ký"
+// @Success 201 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req AuthRequest
 	if err := decodeJSON(w, r, &req); err != nil {
@@ -43,6 +55,18 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Login đăng nhập tài khoản.
+//
+// @Summary Đăng nhập
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body AuthRequest true "Thông tin đăng nhập"
+// @Success 201 {object} TokenResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req AuthRequest
 	if err := decodeJSON(w, r, &req); err != nil {
@@ -62,6 +86,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Me lấy thông tin người dùng hiện tại.
+//
+// @Summary Thông tin người dùng
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.User
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /users/me [get]
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	// Lấy user ID mà JWT middleware đã lưu
 	userID, ok := middleware.GetUserID(r)

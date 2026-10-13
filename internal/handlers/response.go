@@ -5,6 +5,18 @@ import (
 	"net/http"
 )
 
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+type TokenResponse struct {
+	Token string `json:"token"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

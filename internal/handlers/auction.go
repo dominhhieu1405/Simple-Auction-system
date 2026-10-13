@@ -31,6 +31,19 @@ type CreateAuctionRequest struct {
 	EndTime       time.Time `json:"end_time"`
 }
 
+// CreateAuction tạo phiên đấu giá.
+//
+// @Summary Tạo phiên đấu giá
+// @Tags Auctions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateAuctionRequest true "Thông tin phiên đấu giá"
+// @Success 201 {object} models.Auction
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auctions [post]
 func (handler *AuctionHandler) CreateAuction(
 	writer http.ResponseWriter,
 	request *http.Request,
@@ -95,4 +108,35 @@ func (handler *AuctionHandler) CreateAuction(
 			"internal server error",
 		)
 	}
+}
+
+// GetAllAuctions lấy danh sách phiên đấu giá.
+//
+// @Summary Danh sách phiên đấu giá
+// @Tags Auctions
+// @Produce json
+// @Success 200 {array} models.Auction
+// @Failure 500 {object} ErrorResponse
+// @Router /auctions [get]
+func (handler *AuctionHandler) GetAllAuctions(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	auctions, err := handler.service.GetAllAuctions()
+	if err != nil {
+		log.Printf("get auctions: %v", err)
+
+		writeError(
+			writer,
+			http.StatusInternalServerError,
+			"internal server error",
+		)
+		return
+	}
+
+	writeJSON(
+		writer,
+		http.StatusOK,
+		auctions,
+	)
 }

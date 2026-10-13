@@ -14,6 +14,7 @@ var ErrInvalidAuction = errors.New("invalid auction")
 
 type AuctionService interface {
 	CreateAuction(auction *models.Auction) error
+	GetAllAuctions() ([]models.Auction, error)
 }
 
 type auctionService struct {
@@ -64,4 +65,11 @@ func (service *auctionService) CreateAuction(
 	auction.Status = models.AuctionStatusActive
 
 	return service.repository.CreateAuction(auction)
+}
+
+func (service *auctionService) GetAllAuctions() (
+	[]models.Auction,
+	error,
+) {
+	return service.repository.GetAllAuctions()
 }
