@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"simple-auction-system/internal/services"
 )
@@ -22,34 +23,40 @@ type AuthRequest struct {
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req AuthRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 
 	err := h.service.Register(req.Username, req.Password)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusConflict)
-		return
+	switch {
+	case err == nil:
+		writeJSON(w, http.StatusCreated, map[string]string{"message": "user registered successfully"})
+	case errors.Is(err, services.ErrInvalidInput):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, services.ErrUserExists):
+		writeError(w, http.StatusConflict, err.Error())
+	default:
+		log.Printf("register: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req AuthRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 
 	token, err := h.service.Login(req.Username, req.Password)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
+	switch {
+	case err == nil:
+		writeJSON(w, http.StatusOK, map[string]string{"token": token})
+	case errors.Is(err, services.ErrInvalidCredentials):
+		writeError(w, http.StatusUnauthorized, err.Error())
+	default:
+		log.Printf("login: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
 }

@@ -20,11 +20,11 @@ Base URL: `/api`
 
 ## Database
 
-| Bảng     | Các cột                                                                           | Mô tả           |
-|----------|-----------------------------------------------------------------------------------|-----------------|
-| users    | id, username, password                                                            | Người dùng      |
-| auctions | id, owner_id, title, description, starting_price, min_increment, end_time, status | Tên đăng nhập   |
-| bids     | id, auction_id, user_id, amount, create_at                                        | Lịch sử trả giá |
+| Bảng     | Các cột                                                                           | Mô tả             |
+|----------|-----------------------------------------------------------------------------------|-------------------|
+| users    | id, username, password                                                            | Người dùng        |
+| auctions | id, owner_id, title, description, starting_price, min_increment, end_time, status | Các phiên đấu giá |
+| bids     | id, auction_id, user_id, amount, create_at                                        | Lịch sử trả giá   |
 
 ## Cấu trúc thư mục
 ```

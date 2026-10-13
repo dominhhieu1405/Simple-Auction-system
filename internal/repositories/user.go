@@ -1,8 +1,14 @@
 package repositories
 
 import (
-	"simple-auction-system/internal/models"
+	"errors"
 	"gorm.io/gorm"
+	"simple-auction-system/internal/models"
+)
+
+var (
+	ErrNotFound  = errors.New("record not found")
+	ErrDuplicate = errors.New("duplicate record")
 )
 
 // UserRepository định nghĩa các thao tác với database
@@ -21,12 +27,19 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 func (r *userRepository) CreateUser(user *models.User) error {
-	return r.db.Create(user).Error
+	err := r.db.Create(user).Error
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return ErrDuplicate
+	}
+	return err
 }
 
 func (r *userRepository) GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
 	err := r.db.Where("username = ?", username).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
