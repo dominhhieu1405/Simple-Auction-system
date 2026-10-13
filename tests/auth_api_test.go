@@ -12,106 +12,173 @@ import (
 
 const baseURL = "http://localhost:8080/api"
 
-type authResponse struct {
-	Message string `json:"message"`
-	Token   string `json:"token"`
-	Error   string `json:"error"`
+type apiResponse struct {
+	ID       uint   `json:"id"`
+	Username string `json:"username"`
+	Message  string `json:"message"`
+	Token    string `json:"token"`
+	Error    string `json:"error"`
 }
 
-func sendJSON(
+func sendRequest(
 	t *testing.T,
 	method string,
 	url string,
+	token string,
 	payload any,
-) (*http.Response, authResponse) {
+) (int, apiResponse) {
 	t.Helper()
 
-	body, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("marshal request body: %v", err)
+	var body io.Reader
+
+	if payload != nil {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("marshal request: %v", err)
+		}
+
+		body = bytes.NewReader(data)
 	}
 
-	req, err := http.NewRequest(method, url, bytes.NewReader(body))
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		t.Fatalf("create request: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	if payload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatalf("send request: %v\nServer đã được chạy chưa?", err)
+		t.Fatalf(
+			"send request: %v\nServer đã được chạy chưa?",
+			err,
+		)
 	}
-	t.Cleanup(func() {
-		_ = resp.Body.Close()
-	})
+	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatalf("read response body: %v", err)
+		t.Fatalf("read response: %v", err)
 	}
 
-	var result authResponse
+	var result apiResponse
+
 	if err := json.Unmarshal(data, &result); err != nil {
-		t.Fatalf("decode response %q: %v", string(data), err)
+		t.Fatalf(
+			"decode response %q: %v",
+			string(data),
+			err,
+		)
 	}
 
-	return resp, result
+	return resp.StatusCode, result
 }
 
-func TestRegisterAndLogin(t *testing.T) {
-	// Tạo username khác nhau sau mỗi lần chạy để tránh bị trùng.
-	username := fmt.Sprintf("apitest_%d", time.Now().UnixNano())
+func TestAuthAPI(t *testing.T) {
+	username := fmt.Sprintf(
+		"apitest_%d",
+		time.Now().UnixNano(),
+	)
 	password := "password123"
 
-	t.Run("register successfully", func(t *testing.T) {
-		resp, result := sendJSON(
+	var token string
+
+	t.Run("register", func(t *testing.T) {
+		status, result := sendRequest(
 			t,
 			http.MethodPost,
 			baseURL+"/auth/register",
+			"",
 			map[string]string{
 				"username": username,
 				"password": password,
 			},
 		)
 
-		if resp.StatusCode != http.StatusCreated {
+		if status != http.StatusCreated {
 			t.Fatalf(
-				"expected status 201, got %d; error=%q",
-				resp.StatusCode,
+				"expected 201, got %d; error=%q",
+				status,
 				result.Error,
 			)
 		}
 
 		if result.Message != "user registered successfully" {
 			t.Errorf(
-				"unexpected message: got %q",
+				"unexpected message: %q",
 				result.Message,
 			)
 		}
 	})
 
-	t.Run("login successfully", func(t *testing.T) {
-		resp, result := sendJSON(
+	t.Run("login", func(t *testing.T) {
+		status, result := sendRequest(
 			t,
 			http.MethodPost,
 			baseURL+"/auth/login",
+			"",
 			map[string]string{
 				"username": username,
 				"password": password,
 			},
 		)
 
-		if resp.StatusCode != http.StatusOK {
+		if status != http.StatusOK {
 			t.Fatalf(
-				"expected status 200, got %d; error=%q",
-				resp.StatusCode,
+				"expected 200, got %d; error=%q",
+				status,
 				result.Error,
 			)
 		}
 
 		if result.Token == "" {
 			t.Fatal("expected JWT token, got empty token")
+		}
+
+		token = result.Token
+	})
+
+	t.Run("get current user", func(t *testing.T) {
+		if token == "" {
+			t.Fatal("login did not return a token")
+		}
+
+		status, result := sendRequest(
+			t,
+			http.MethodGet,
+			baseURL+"/users/me",
+			token,
+			nil,
+		)
+
+		if status != http.StatusOK {
+			t.Fatalf(
+				"expected 200, got %d; error=%q",
+				status,
+				result.Error,
+			)
+		}
+
+		if result.ID == 0 {
+			t.Error("expected user ID greater than 0")
+		}
+
+		if result.Username != username {
+			t.Errorf(
+				"expected username %q, got %q",
+				username,
+				result.Username,
+			)
 		}
 	})
 }

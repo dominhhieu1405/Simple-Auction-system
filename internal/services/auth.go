@@ -18,6 +18,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidInput       = errors.New("invalid input")
 	ErrInvalidToken       = errors.New("invalid token")
+	ErrUserNotFound       = errors.New("user not found")
 )
 
 type Claims struct {
@@ -31,6 +32,7 @@ type AuthService interface {
 	Register(username, password string) error
 	Login(username, password string) (string, error)
 	ParseToken(token string) (*Claims, error)
+	GetUserByID(id uint) (*models.User, error)
 }
 
 type authService struct {
@@ -104,11 +106,35 @@ func (s *authService) Login(username, password string) (string, error) {
 }
 func (s *authService) ParseToken(tokenStr string) (*Claims, error) {
 	claims := &Claims{}
-	_, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (any, error) {
-		return s.jwtKey, nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
-	if err != nil {
+
+	token, err := jwt.ParseWithClaims(
+		tokenStr,
+		claims,
+		func(t *jwt.Token) (any, error) {
+			return s.jwtKey, nil
+		},
+		jwt.WithValidMethods([]string{
+			jwt.SigningMethodHS256.Alg(),
+		}),
+	)
+
+	if err != nil || !token.Valid {
 		return nil, ErrInvalidToken
 	}
+
 	return claims, nil
+}
+
+func (s *authService) GetUserByID(id uint) (*models.User, error) {
+	user, err := s.repo.GetUserByID(id)
+
+	if errors.Is(err, repositories.ErrNotFound) {
+		return nil, ErrUserNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

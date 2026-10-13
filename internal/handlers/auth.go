@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"simple-auction-system/internal/middleware"
 	"simple-auction-system/internal/services"
 )
 
@@ -58,5 +59,33 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	default:
 		log.Printf("login: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal server error")
+	}
+}
+
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	// Lấy user ID mà JWT middleware đã lưu
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	// Tìm user trong database
+	user, err := h.service.GetUserByID(userID)
+
+	switch {
+	case err == nil:
+		writeJSON(w, http.StatusOK, user)
+
+	case errors.Is(err, services.ErrUserNotFound):
+		writeError(w, http.StatusNotFound, err.Error())
+
+	default:
+		log.Printf("get current user: %v", err)
+		writeError(
+			w,
+			http.StatusInternalServerError,
+			"internal server error",
+		)
 	}
 }

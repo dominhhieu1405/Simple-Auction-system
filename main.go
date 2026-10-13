@@ -9,6 +9,7 @@ import (
 
 	"simple-auction-system/internal/config"
 	"simple-auction-system/internal/handlers"
+	"simple-auction-system/internal/middleware"
 	"simple-auction-system/internal/models"
 	"simple-auction-system/internal/repositories"
 	"simple-auction-system/internal/services"
@@ -46,15 +47,36 @@ func main() {
 	authService := services.NewAuthService(userRepo, cfg.JWTSecret)
 	authHandler := handlers.NewAuthHandler(authService)
 
+	auctionRepository := repositories.NewAuctionRepository(db)
+	auctionService := services.NewAuctionService(
+		auctionRepository,
+	)
+	auctionHandler := handlers.NewAuctionHandler(
+		auctionService,
+	)
+
 	// 4. Khởi tạo Router (Sử dụng ServeMux chuẩn của Go 1.22+)
 	mux := http.NewServeMux()
 
 	// Đăng ký các endpoints
 	mux.HandleFunc("POST /api/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
+	mux.Handle(
+		"GET /api/users/me",
+		middleware.RequireAuth(authService)(
+			http.HandlerFunc(authHandler.Me),
+		),
+	)
+
+	mux.Handle(
+		"POST /api/auctions",
+		middleware.RequireAuth(authService)(
+			http.HandlerFunc(auctionHandler.CreateAuction),
+		),
+	)
 
 	// 5. Khởi chạy Server
-	fmt.Println("Server is running on port 8080...")
+	fmt.Println("Server is running on port " + cfg.Addr + " ...")
 	if err := http.ListenAndServe(cfg.Addr, mux); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}

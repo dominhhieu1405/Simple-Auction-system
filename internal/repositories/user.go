@@ -2,8 +2,9 @@ package repositories
 
 import (
 	"errors"
-	"gorm.io/gorm"
 	"simple-auction-system/internal/models"
+
+	"gorm.io/gorm"
 )
 
 var (
@@ -15,6 +16,7 @@ var (
 type UserRepository interface {
 	CreateUser(user *models.User) error
 	GetUserByUsername(username string) (*models.User, error)
+	GetUserByID(id uint) (*models.User, error)
 }
 
 type userRepository struct {
@@ -43,5 +45,21 @@ func (r *userRepository) GetUserByUsername(username string) (*models.User, error
 	if err != nil {
 		return nil, err
 	}
+	return &user, nil
+}
+
+func (r *userRepository) GetUserByID(id uint) (*models.User, error) {
+	var user models.User
+
+	err := r.db.First(&user, id).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &user, nil
 }
