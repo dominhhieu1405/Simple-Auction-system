@@ -1,0 +1,353 @@
+basePath: /api
+definitions:
+  handlers.AuthRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.CreateAuctionRequest:
+    properties:
+      description:
+        type: string
+      end_time:
+        type: string
+      min_increment:
+        type: integer
+      starting_price:
+        type: integer
+      title:
+        type: string
+    type: object
+  handlers.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  handlers.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  handlers.PlaceBidRequest:
+    properties:
+      amount:
+        type: integer
+    type: object
+  handlers.TokenResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  models.Auction:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      end_time:
+        type: string
+      id:
+        type: integer
+      min_increment:
+        type: integer
+      owner_id:
+        description: Người tạo phiên đấu giá
+        type: integer
+      starting_price:
+        description: Lưu tiền dưới dạng số nguyên, không dùng float64
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Bid:
+    properties:
+      amount:
+        type: integer
+      auction_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  models.User:
+    properties:
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API cho hệ thống đấu giá đơn giản
+  title: Simple Auction System API
+  version: "1.0"
+paths:
+  /auctions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Auction'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Danh sách phiên đấu giá
+      tags:
+      - Auctions
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin phiên đấu giá
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateAuctionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Auction'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Tạo phiên đấu giá
+      tags:
+      - Auctions
+  /auctions/{id}:
+    get:
+      parameters:
+      - description: Auction ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Auction'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Chi tiết phiên đấu giá
+      tags:
+      - Auctions
+  /auctions/{id}/bids:
+    get:
+      parameters:
+      - description: Auction ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Bid'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Lịch sử đặt giá
+      tags:
+      - Bids
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auction ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Số tiền đặt giá
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PlaceBidRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Bid'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Đặt giá
+      tags:
+      - Bids
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin đăng nhập
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AuthRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Đăng nhập
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin đăng ký
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AuthRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Đăng ký tài khoản
+      tags:
+      - Authentication
+  /users/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Thông tin người dùng
+      tags:
+      - Users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
