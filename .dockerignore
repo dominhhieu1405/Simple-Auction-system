@@ -1,12 +1,2 @@
-.git
-.idea
-.env
-
-data
-tests
-
-*.db
-*.exe
-
-README.md
-TODO.md
+*
+!dist/

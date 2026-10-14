@@ -1,36 +1,18 @@
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-
+    image: ghcr.io/dominhhieu1405/simple-auction-system:${APP_VERSION:-latest}
     container_name: simple-auction-api
 
     ports:
       - "${SERVER_PORT:-8080}:8080"
 
     environment:
-      JWT_SECRET: "${JWT_SECRET}"
-      DB_PATH: "/app/data/auction.db"
-      SERVER_PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET:?Hay dat JWT_SECRET trong file .env}
 
     volumes:
       - auction_data:/app/data
 
     restart: unless-stopped
-
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--spider",
-          "http://localhost:8080/api/auctions"
-        ]
-      interval: 10s
-      timeout: 3s
-      retries: 5
 
 volumes:
   auction_data:

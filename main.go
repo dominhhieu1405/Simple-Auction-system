@@ -39,7 +39,9 @@ func main() {
 	}
 
 	// 1. Kết nối Database SQLite
-	db, err := gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{
+		TranslateError: true,
+	})
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}

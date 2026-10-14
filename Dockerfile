@@ -1,20 +1,10 @@
-FROM golang:1.27.2-alpine3.24 AS builder
+# syntax=docker/dockerfile:1
 
-WORKDIR /source
-
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-
-RUN CGO_ENABLED=0 GOOS=linux go build \
-    -buildvcs=false \
-    -trimpath \
-    -ldflags="-s -w" \
-    -o /output/auction-server \
-    .
-
+# Image chỉ đóng gói binary đã build sẵn trong dist/, không compile.
 FROM alpine:3.24.2
+
+ARG TARGETOS
+ARG TARGETARCH
 
 RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S appgroup \
@@ -24,13 +14,19 @@ RUN apk add --no-cache ca-certificates tzdata \
 
 WORKDIR /app
 
-COPY --from=builder \
-    --chown=appuser:appgroup \
-    /output/auction-server \
+COPY --chown=appuser:appgroup --chmod=755 \
+    dist/auction-server-${TARGETOS}-${TARGETARCH} \
     ./auction-server
+
+ENV DB_PATH=/app/data/auction.db \
+    SERVER_PORT=8080
 
 USER appuser
 
 EXPOSE 8080
+VOLUME /app/data
+
+HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
+    CMD wget -q --spider "http://127.0.0.1:${SERVER_PORT}/api/auctions" || exit 1
 
 ENTRYPOINT ["./auction-server"]
