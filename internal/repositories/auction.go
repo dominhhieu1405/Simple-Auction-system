@@ -12,6 +12,8 @@ type AuctionRepository interface {
 	CreateAuction(auction *models.Auction) error
 	GetAllAuctions() ([]models.Auction, error)
 	GetAuctionByID(id uint) (*models.Auction, error)
+	DeleteAuction(id uint) error
+	UpdateAuctionStatus(id uint, status string) error
 }
 
 type auctionRepository struct {
@@ -64,4 +66,23 @@ func (repository *auctionRepository) GetAuctionByID(
 	}
 
 	return &auction, nil
+}
+
+func (repository *auctionRepository) DeleteAuction(
+	id uint,
+) error {
+	return repository.database.
+		Delete(&models.Auction{}, id).
+		Error
+}
+
+func (repository *auctionRepository) UpdateAuctionStatus(
+	id uint,
+	status string,
+) error {
+	return repository.database.
+		Model(&models.Auction{}).
+		Where("id = ?", id).
+		Update("status", status).
+		Error
 }

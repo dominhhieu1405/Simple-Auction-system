@@ -26,6 +26,10 @@ type BidService interface {
 	GetBidsByAuctionID(
 		auctionID uint,
 	) ([]models.Bid, error)
+
+	GetBidsByUserID(
+		userID uint,
+	) ([]models.Bid, error)
 }
 
 func (service *bidService) GetBidsByAuctionID(
@@ -120,4 +124,11 @@ func (service *bidService) PlaceBid(
 	}
 
 	return bid, nil
+}
+
+func (service *bidService) GetBidsByUserID(
+	userID uint,
+) ([]models.Bid, error) {
+	return service.bidRepository.
+		GetBidsByUserID(userID)
 }

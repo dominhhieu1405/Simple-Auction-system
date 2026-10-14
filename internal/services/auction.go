@@ -11,25 +11,33 @@ import (
 )
 
 var (
-	ErrInvalidAuction  = errors.New("invalid auction")
-	ErrAuctionNotFound = errors.New("auction not found")
+	ErrInvalidAuction       = errors.New("invalid auction")
+	ErrAuctionNotFound      = errors.New("auction not found")
+	ErrNotAuctionOwner      = errors.New("only the owner can manage this auction")
+	ErrAuctionHasBids       = errors.New("auction cannot be deleted because it has bids")
+	ErrAuctionAlreadyClosed = errors.New("auction is already closed")
 )
 
 type AuctionService interface {
 	CreateAuction(auction *models.Auction) error
 	GetAllAuctions() ([]models.Auction, error)
 	GetAuctionByID(id uint) (*models.Auction, error)
+	DeleteAuction(auctionID uint, userID uint) error
+	CloseAuction(auctionID uint, userID uint) (*models.Auction, *models.Bid, error)
 }
 
 type auctionService struct {
-	repository repositories.AuctionRepository
+	repository    repositories.AuctionRepository
+	bidRepository repositories.BidRepository
 }
 
 func NewAuctionService(
 	repository repositories.AuctionRepository,
+	bidRepository repositories.BidRepository,
 ) AuctionService {
 	return &auctionService{
-		repository: repository,
+		repository:    repository,
+		bidRepository: bidRepository,
 	}
 }
 
@@ -92,4 +100,82 @@ func (service *auctionService) GetAuctionByID(
 	}
 
 	return auction, nil
+}
+
+func (service *auctionService) DeleteAuction(
+	auctionID uint,
+	userID uint,
+) error {
+	auction, err := service.repository.
+		GetAuctionByID(auctionID)
+
+	if errors.Is(err, repositories.ErrNotFound) {
+		return ErrAuctionNotFound
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if auction.OwnerID != userID {
+		return ErrNotAuctionOwner
+	}
+
+	bidCount, err := service.bidRepository.
+		CountBidsByAuctionID(auctionID)
+
+	if err != nil {
+		return err
+	}
+
+	if bidCount > 0 {
+		return ErrAuctionHasBids
+	}
+
+	return service.repository.DeleteAuction(auctionID)
+}
+
+func (service *auctionService) CloseAuction(
+	auctionID uint,
+	userID uint,
+) (*models.Auction, *models.Bid, error) {
+	auction, err := service.repository.
+		GetAuctionByID(auctionID)
+
+	if errors.Is(err, repositories.ErrNotFound) {
+		return nil, nil, ErrAuctionNotFound
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if auction.OwnerID != userID {
+		return nil, nil, ErrNotAuctionOwner
+	}
+
+	if auction.Status == models.AuctionStatusClosed {
+		return nil, nil, ErrAuctionAlreadyClosed
+	}
+
+	winningBid, err := service.bidRepository.
+		GetHighestBid(auctionID)
+
+	if errors.Is(err, repositories.ErrNotFound) {
+		winningBid = nil
+	} else if err != nil {
+		return nil, nil, err
+	}
+
+	err = service.repository.UpdateAuctionStatus(
+		auctionID,
+		models.AuctionStatusClosed,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	auction.Status = models.AuctionStatusClosed
+
+	return auction, winningBid, nil
 }

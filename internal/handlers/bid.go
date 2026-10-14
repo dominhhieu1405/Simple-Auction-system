@@ -130,8 +130,8 @@ func (handler *BidHandler) PlaceBid(
 		)
 	}
 
-	
 }
+
 // GetBidsByAuctionID lấy lịch sử đặt giá.
 //
 // @Summary Lịch sử đặt giá
@@ -186,4 +186,49 @@ func (handler *BidHandler) GetBidsByAuctionID(
 			"internal server error",
 		)
 	}
+}
+
+// GetCurrentUserBids lấy lịch sử đặt giá của người dùng.
+//
+// @Summary Lịch sử đặt giá của người dùng
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Bid
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /users/me/bids [get]
+func (handler *BidHandler) GetCurrentUserBids(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	userID, ok := middleware.GetUserID(request)
+	if !ok {
+		writeError(
+			writer,
+			http.StatusUnauthorized,
+			"unauthorized",
+		)
+		return
+	}
+
+	bids, err := handler.service.
+		GetBidsByUserID(userID)
+
+	if err != nil {
+		log.Printf("get current user bids: %v", err)
+
+		writeError(
+			writer,
+			http.StatusInternalServerError,
+			"internal server error",
+		)
+		return
+	}
+
+	writeJSON(
+		writer,
+		http.StatusOK,
+		bids,
+	)
 }

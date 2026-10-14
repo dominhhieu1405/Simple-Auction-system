@@ -12,7 +12,10 @@ type BidRepository interface {
 	CreateBid(bid *models.Bid) error
 	GetHighestBid(auctionID uint) (*models.Bid, error)
 	GetBidsByAuctionID(auctionID uint) ([]models.Bid, error)
+	CountBidsByAuctionID(auctionID uint) (int64, error)
+	GetBidsByUserID(userID uint) ([]models.Bid, error)
 }
+
 func (repository *bidRepository) GetBidsByAuctionID(
 	auctionID uint,
 ) ([]models.Bid, error) {
@@ -26,6 +29,7 @@ func (repository *bidRepository) GetBidsByAuctionID(
 
 	return bids, err
 }
+
 type bidRepository struct {
 	database *gorm.DB
 }
@@ -64,4 +68,32 @@ func (repository *bidRepository) GetHighestBid(
 	}
 
 	return &bid, nil
+}
+
+func (repository *bidRepository) CountBidsByAuctionID(
+	auctionID uint,
+) (int64, error) {
+	var count int64
+
+	err := repository.database.
+		Model(&models.Bid{}).
+		Where("auction_id = ?", auctionID).
+		Count(&count).
+		Error
+
+	return count, err
+}
+
+func (repository *bidRepository) GetBidsByUserID(
+	userID uint,
+) ([]models.Bid, error) {
+	bids := make([]models.Bid, 0)
+
+	err := repository.database.
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&bids).
+		Error
+
+	return bids, err
 }

@@ -56,17 +56,18 @@ func main() {
 
 	// 3. Setup Dependency Injection
 	userRepo := repositories.NewUserRepository(db)
+	auctionRepository := repositories.NewAuctionRepository(db)
+	bidRepository := repositories.NewBidRepository(db)
 	authService := services.NewAuthService(userRepo, cfg.JWTSecret)
 	authHandler := handlers.NewAuthHandler(authService)
 
-	auctionRepository := repositories.NewAuctionRepository(db)
 	auctionService := services.NewAuctionService(
 		auctionRepository,
+		bidRepository,
 	)
 	auctionHandler := handlers.NewAuctionHandler(
 		auctionService,
 	)
-	bidRepository := repositories.NewBidRepository(db)
 
 	bidService := services.NewBidService(
 		auctionRepository,
@@ -111,14 +112,35 @@ func main() {
 		auctionHandler.GetAuctionByID,
 	)
 	mux.Handle(
-	"POST /api/auctions/{id}/bids",
-	middleware.RequireAuth(authService)(
-		http.HandlerFunc(bidHandler.PlaceBid),
-	),
+		"POST /api/auctions/{id}/bids",
+		middleware.RequireAuth(authService)(
+			http.HandlerFunc(bidHandler.PlaceBid),
+		),
 	)
 	mux.HandleFunc(
-	"GET /api/auctions/{id}/bids",
-	bidHandler.GetBidsByAuctionID,
+		"GET /api/auctions/{id}/bids",
+		bidHandler.GetBidsByAuctionID,
+	)
+	mux.Handle(
+		"POST /api/auctions/{id}/close",
+		middleware.RequireAuth(authService)(
+			http.HandlerFunc(auctionHandler.CloseAuction),
+		),
+	)
+	mux.Handle(
+		"DELETE /api/auctions/{id}",
+		middleware.RequireAuth(authService)(
+			http.HandlerFunc(auctionHandler.DeleteAuction),
+		),
+	)
+
+	mux.Handle(
+		"GET /api/users/me/bids",
+		middleware.RequireAuth(authService)(
+			http.HandlerFunc(
+				bidHandler.GetCurrentUserBids,
+			),
+		),
 	)
 	// 5. Khởi chạy Server
 	fmt.Println("Server is running on port " + cfg.Addr + " ...")

@@ -29,9 +29,9 @@ type AuthRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body AuthRequest true "Thông tin đăng ký"
-// @Success 201 {object} MessageResponse
+// @Success 200 {object} TokenResponse
 // @Failure 400 {object} ErrorResponse
-// @Failure 409 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {

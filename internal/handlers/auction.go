@@ -15,6 +15,10 @@ import (
 type AuctionHandler struct {
 	service services.AuctionService
 }
+type CloseAuctionResponse struct {
+	Auction    *models.Auction `json:"auction"`
+	WinningBid *models.Bid     `json:"winning_bid"`
+}
 
 func NewAuctionHandler(
 	service services.AuctionService,
@@ -188,6 +192,187 @@ func (handler *AuctionHandler) GetAuctionByID(
 
 	default:
 		log.Printf("get auction: %v", err)
+
+		writeError(
+			writer,
+			http.StatusInternalServerError,
+			"internal server error",
+		)
+	}
+}
+
+// DeleteAuction xóa phiên đấu giá.
+//
+// @Summary Xóa phiên đấu giá
+// @Tags Auctions
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Auction ID"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auctions/{id} [delete]
+func (handler *AuctionHandler) DeleteAuction(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	userID, ok := middleware.GetUserID(request)
+	if !ok {
+		writeError(
+			writer,
+			http.StatusUnauthorized,
+			"unauthorized",
+		)
+		return
+	}
+
+	idText := request.PathValue("id")
+
+	id, err := strconv.ParseUint(idText, 10, 64)
+	if err != nil || id == 0 {
+		writeError(
+			writer,
+			http.StatusBadRequest,
+			"invalid auction id",
+		)
+		return
+	}
+
+	err = handler.service.DeleteAuction(
+		uint(id),
+		userID,
+	)
+
+	switch {
+	case err == nil:
+		writeJSON(
+			writer,
+			http.StatusOK,
+			MessageResponse{
+				Message: "auction deleted successfully",
+			},
+		)
+
+	case errors.Is(err, services.ErrAuctionNotFound):
+		writeError(
+			writer,
+			http.StatusNotFound,
+			err.Error(),
+		)
+
+	case errors.Is(err, services.ErrNotAuctionOwner):
+		writeError(
+			writer,
+			http.StatusForbidden,
+			err.Error(),
+		)
+
+	case errors.Is(err, services.ErrAuctionHasBids):
+		writeError(
+			writer,
+			http.StatusConflict,
+			err.Error(),
+		)
+
+	default:
+		log.Printf("delete auction: %v", err)
+
+		writeError(
+			writer,
+			http.StatusInternalServerError,
+			"internal server error",
+		)
+	}
+}
+
+// CloseAuction kết thúc phiên đấu giá.
+//
+// @Summary Kết thúc phiên đấu giá
+// @Tags Auctions
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Auction ID"
+// @Success 200 {object} CloseAuctionResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auctions/{id}/close [post]
+func (handler *AuctionHandler) CloseAuction(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	userID, ok := middleware.GetUserID(request)
+	if !ok {
+		writeError(
+			writer,
+			http.StatusUnauthorized,
+			"unauthorized",
+		)
+		return
+	}
+
+	idText := request.PathValue("id")
+
+	id, err := strconv.ParseUint(idText, 10, 64)
+	if err != nil || id == 0 {
+		writeError(
+			writer,
+			http.StatusBadRequest,
+			"invalid auction id",
+		)
+		return
+	}
+
+	auction, winningBid, err :=
+		handler.service.CloseAuction(
+			uint(id),
+			userID,
+		)
+
+	switch {
+	case err == nil:
+		writeJSON(
+			writer,
+			http.StatusOK,
+			CloseAuctionResponse{
+				Auction:    auction,
+				WinningBid: winningBid,
+			},
+		)
+
+	case errors.Is(err, services.ErrAuctionNotFound):
+		writeError(
+			writer,
+			http.StatusNotFound,
+			err.Error(),
+		)
+
+	case errors.Is(err, services.ErrNotAuctionOwner):
+		writeError(
+			writer,
+			http.StatusForbidden,
+			err.Error(),
+		)
+
+	case errors.Is(
+		err,
+		services.ErrAuctionAlreadyClosed,
+	):
+		writeError(
+			writer,
+			http.StatusConflict,
+			err.Error(),
+		)
+
+	default:
+		log.Printf("close auction: %v", err)
 
 		writeError(
 			writer,
