@@ -1,5 +1,47 @@
 # Simple-Auction-system
 
+## Chạy dự án
+
+Yêu cầu: Go 1.27 trở lên hoặc Docker.
+
+### Chạy bằng Go
+
+```bash
+git clone https://github.com/dominhhieu1405/Simple-Auction-system.git
+cd Simple-Auction-system
+go mod download
+```
+
+Tạo file `.env`:
+
+```env
+JWT_SECRET=change-this-secret
+DB_PATH=./data/auction.db
+SERVER_PORT=8080
+```
+
+Khởi động:
+
+```bash
+go run .
+```
+
+### Chạy bằng Docker
+
+```bash
+docker pull ghcr.io/dominhhieu1405/simple-auction-system:latest
+```
+
+```bash
+docker run -d --name simple-auction-api -p 8080:8080 -e JWT_SECRET="change-this-secret" -e DB_PATH="/app/data/auction.db" -e SERVER_PORT="8080" -v auction_data:/app/data ghcr.io/<github-username>/simple-auction-system:latest
+```
+
+### Truy cập
+
+- API: `http://localhost:8080`
+- Swagger: `http://localhost:8080/docs/`
+
+
 ## REST API Endpoints
 
 Base URL: `/api`
