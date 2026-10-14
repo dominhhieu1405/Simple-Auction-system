@@ -97,6 +97,10 @@ func main() {
 		"GET /api/auctions",
 		auctionHandler.GetAllAuctions,
 	)
+	mux.HandleFunc(
+		"GET /api/auctions/{id}",
+		auctionHandler.GetAuctionByID,
+	)
 
 	// 5. Khởi chạy Server
 	fmt.Println("Server is running on port " + cfg.Addr + " ...")

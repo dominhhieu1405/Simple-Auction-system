@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"simple-auction-system/internal/middleware"
@@ -139,4 +140,59 @@ func (handler *AuctionHandler) GetAllAuctions(
 		http.StatusOK,
 		auctions,
 	)
+}
+
+// GetAuctionByID lấy chi tiết phiên đấu giá.
+//
+// @Summary Chi tiết phiên đấu giá
+// @Tags Auctions
+// @Produce json
+// @Param id path int true "Auction ID"
+// @Success 200 {object} models.Auction
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auctions/{id} [get]
+func (handler *AuctionHandler) GetAuctionByID(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	idText := request.PathValue("id")
+
+	id, err := strconv.ParseUint(idText, 10, 64)
+	if err != nil || id == 0 {
+		writeError(
+			writer,
+			http.StatusBadRequest,
+			"invalid auction id",
+		)
+		return
+	}
+
+	auction, err := handler.service.GetAuctionByID(uint(id))
+
+	switch {
+	case err == nil:
+		writeJSON(
+			writer,
+			http.StatusOK,
+			auction,
+		)
+
+	case errors.Is(err, services.ErrAuctionNotFound):
+		writeError(
+			writer,
+			http.StatusNotFound,
+			err.Error(),
+		)
+
+	default:
+		log.Printf("get auction: %v", err)
+
+		writeError(
+			writer,
+			http.StatusInternalServerError,
+			"internal server error",
+		)
+	}
 }

@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"errors"
+
 	"simple-auction-system/internal/models"
 
 	"gorm.io/gorm"
@@ -9,6 +11,7 @@ import (
 type AuctionRepository interface {
 	CreateAuction(auction *models.Auction) error
 	GetAllAuctions() ([]models.Auction, error)
+	GetAuctionByID(id uint) (*models.Auction, error)
 }
 
 type auctionRepository struct {
@@ -41,4 +44,24 @@ func (repository *auctionRepository) GetAllAuctions() (
 		Error
 
 	return auctions, err
+}
+
+func (repository *auctionRepository) GetAuctionByID(
+	id uint,
+) (*models.Auction, error) {
+	var auction models.Auction
+
+	err := repository.database.
+		First(&auction, id).
+		Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &auction, nil
 }

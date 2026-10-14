@@ -10,11 +10,15 @@ import (
 	"simple-auction-system/internal/repositories"
 )
 
-var ErrInvalidAuction = errors.New("invalid auction")
+var (
+	ErrInvalidAuction  = errors.New("invalid auction")
+	ErrAuctionNotFound = errors.New("auction not found")
+)
 
 type AuctionService interface {
 	CreateAuction(auction *models.Auction) error
 	GetAllAuctions() ([]models.Auction, error)
+	GetAuctionByID(id uint) (*models.Auction, error)
 }
 
 type auctionService struct {
@@ -72,4 +76,20 @@ func (service *auctionService) GetAllAuctions() (
 	error,
 ) {
 	return service.repository.GetAllAuctions()
+}
+
+func (service *auctionService) GetAuctionByID(
+	id uint,
+) (*models.Auction, error) {
+	auction, err := service.repository.GetAuctionByID(id)
+
+	if errors.Is(err, repositories.ErrNotFound) {
+		return nil, ErrAuctionNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return auction, nil
 }
