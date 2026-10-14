@@ -1,0 +1,75 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JWT_SECRET: github-actions-test-secret-123456789
+  SERVER_PORT: "8080"
+
+jobs:
+  test:
+    name: Build Docker and test API
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build Go application
+        run: go build -buildvcs=false ./...
+
+      - name: Start Docker container
+        run: docker compose up --build --detach
+
+      - name: Wait for API
+        shell: bash
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent \
+              http://localhost:8080/api/auctions \
+              > /dev/null; then
+              echo "API is ready"
+              exit 0
+            fi
+
+            echo "Waiting for API..."
+            sleep 2
+          done
+
+          echo "API did not start"
+          docker compose logs api
+          exit 1
+
+      - name: Run API tests
+        run: go test ./tests -v
+
+      - name: Show Docker logs
+        if: always()
+        run: docker compose logs api
+
+      - name: Stop Docker container
+        if: always()
+        run: docker compose down
