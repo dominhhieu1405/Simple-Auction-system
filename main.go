@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,9 @@ import (
 
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
+
+//go:embed index.html
+var indexHTML []byte
 
 // @title Simple Auction System API
 // @version 1.0
@@ -88,6 +92,11 @@ func main() {
 			httpSwagger.URL("/docs/doc.json"),
 		),
 	)
+
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(indexHTML)
+	})
 
 	// Đăng ký các endpoints
 	mux.HandleFunc("POST /api/auth/register", authHandler.Register)

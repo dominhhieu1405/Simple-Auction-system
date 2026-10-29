@@ -4,7 +4,7 @@ Dự án cung cấp hệ thống cho nền tảng đấu giá trực tuyến đ�
 
 ---
 
-## Nghiệp vụ (Business Logic)
+## Logic Nghiệp vụ
 
 **1. Tài khoản (Authentication)**
 - Người dùng đăng ký bằng username (3-32 ký tự, duy nhất) và password (6-72 kí tự).
@@ -19,13 +19,13 @@ Dự án cung cấp hệ thống cho nền tảng đấu giá trực tuyến đ�
   - Chỉ chủ phiên mới được **Xóa (Delete)** phiên, với điều kiện phiên đó *chưa có bất kỳ lượt đặt giá nào*.
 
 **3. Đặt giá (Bidding)**
-- Lượt đặt giá đầu tiên phải `≥ Giá khởi điểm`.
-- Các lượt đặt giá tiếp theo phải `≥ Giá cao nhất hiện tại + Bước giá tối thiểu`.
+- Lượt đặt giá đầu tiên phải `>= Giá khởi điểm`.
+- Các lượt đặt giá tiếp theo phải `>= Giá cao nhất hiện tại + Bước giá tối thiểu`.
 - Hệ thống từ chối các lượt đặt giá nếu phiên đã kết thúc (`closed`) hoặc đã vượt quá thời gian kết thúc (`end_time`).
 
 ---
 
-## Công nghệ sử dụng (Tech Stack)
+## Công nghệ sử dụng
 
 - **Ngôn ngữ lập trình:** Go (Golang) version 1.27+
 - **Cơ sở dữ liệu:** SQLite (sử dụng driver thuần Go `glebarez/sqlite` không phụ thuộc CGO)
@@ -35,31 +35,26 @@ Dự án cung cấp hệ thống cho nền tảng đấu giá trực tuyến đ�
 - **Triển khai (Deployment):** Docker, Docker Compose
 - **CI/CD:** GitHub Actions
   
-## Cấu trúc thư mục (Directory Structure)
+## Cấu trúc thư mục
 
 Dự án được tổ chức tuân thủ cấu trúc thư mục tiêu chuẩn của Go:
 
 ```text
 Simple-Auction-System/
-├── .github/workflows/      # Cấu hình CI/CD GitHub Actions (Tự động build & test)
-├── data/                   # Thư mục chứa file SQLite (auction.db) khi chạy thật
-├── internal/               # Chứa mã nguồn nội bộ (không thể import từ project khác)
+├── data/                   # Chưa CSDL auction.db
+├── internal/               # Code
 │   ├── handlers/           # (Tầng Controllers) Nhận HTTP Request, Parse JSON, Gọi Services
-│   ├── middleware/         # (Tầng Gác cổng) Chặn request, kiểm tra JWT, nhúng userID
+│   ├── middleware/         # (Tầng Middleware) Chặn request, kiểm tra JWT, nhúng userID
 │   ├── models/             # (Tầng Data) Định nghĩa các struct và GORM mapping
 │   ├── repositories/       # (Tầng Database) Thực thi các câu lệnh truy vấn CSDL
-│   └── services/           # (Tầng Nghiệp vụ) "Bộ não" xử lý logic, tính toán, kiểm tra quyền
-├── tests/                  # Thư mục chứa các file kiểm thử (Integration Tests)
+│   └── services/           # (Tầng Nghiệp vụ) Xử lý logic, tính toán, kiểm tra quyền
 ├── .env.example            # File mẫu chứa các biến môi trường
-├── docker-compose.yml      # Cấu hình triển khai hệ thống bằng Docker Compose
-├── Dockerfile              # Chỉ dẫn đóng gói ứng dụng thành Docker Image
-├── go.mod / go.sum         # Quản lý thư viện phụ thuộc của Go
 ├── main.go                 # Điểm bắt đầu (Entry point), khởi tạo hệ thống
 └── README.md               # Tài liệu dự án
 ```
 
-**Luồng dữ liệu (Data Flow):**
-`Client` ➔ `Router (main.go)` ➔ `Middleware` ➔ `Handlers` ➔ `Services` ➔ `Repositories` ➔ `Database`
+**Luồng dữ liệu :**
+`Client` -> `Router (main.go)` -> `Middleware` -> `Handlers` -> `Services` -> `Repositories` -> `Database`
 
 ---
 
@@ -148,25 +143,16 @@ cp .env.example .env
 go run .
 ```
 
-### Chạy kịch bản kiểm thử (Integration Tests)
-Đảm bảo server đang chạy ở port `8080`, mở một Terminal khác và gõ:
-```bash
-go test ./tests -v
-```
-## Hạn chế và Phương hướng phát triển
+## Gợi ý cho P2
 
 - **Hiệu năng và khả năng mở rộng dữ liệu:**
-  - **Hạn chế:** Các hàm lấy danh sách phiên hoặc lịch sử trả giá đang nạp toàn bộ bản ghi vào RAM rồi trả về một lần duy nhất. Khi dữ liệu tăng lớn, hệ thống đối mặt với nguy cơ tràn bộ nhớ (Out Of Memory) và nghẽn băng thông.
-  - **Phương hướng:** Triển khai cơ chế phân trang (*Pagination*) bằng các tham số `limit` và `offset`.
+  - **Hạn chế:** Chưa có phân trang
+  - **Phương hướng:** Triển khai cơ chế phân trang qua các tham số `limit` và `offset`.
 
 - **Xử lý tranh chấp dữ liệu (Race Condition):**
-  - **Hạn chế:** Các request đặt giá đồng thời ở những giây cuối phiên có thể cùng đọc một mức giá cũ, gây xung đột hoặc lỗi khóa cơ sở dữ liệu trên SQLite.
-  - **Phương hướng:** Bọc toàn bộ logic kiểm tra và lưu giá mới vào trong Transaction của Database (`db.Transaction`) kết hợp cơ chế khóa dòng phù hợp.
+  - **Hạn chế:** Các request đặt giá đồng thời cùng đọc một mức giá cũ, gây xung đột.
+  - **Phương hướng:** Bọc toàn bộ logic kiểm tra và lưu giá mới vào trong Transaction của Database.
 
-- **Rò rỉ tài nguyên do thiếu `context.Context`:**
-  - **Hạn chế:** Tầng Handlers hiện chỉ trích xuất `userID` rồi truyền các biến rời rạc xuống Service, bỏ qua *request Context*. Khi client ngắt kết nối đột ngột, các tiến trình ngầm vẫn tiếp tục chạy gây lãng phí tài nguyên.
-  - **Phương hướng:** Truyền trực tiếp `context.Context` xuống tận tầng Repository kết hợp cấu hình Timeout Middleware.
-
-- **Bảo mật và Quản lý phiên (Rate Limiting & JWT):**
-  - **Hạn chế:** Các API công khai như đăng nhập sử dụng hàm băm *bcrypt* nặng về CPU nhưng chưa có giới hạn tần suất gọi (*Rate Limiting*), dễ bị tấn công Brute-force. Cơ chế JWT Stateless hiện tại cũng không thể thu hồi token ngay khi người dùng đăng xuất.
-  - **Phương hướng:** Tích hợp Rate Limiter theo IP và xây dựng cơ chế quản lý danh sách token vô hiệu hóa (Blacklist).
+- **Bảo mật:**
+  - **Hạn chế:** Chưa có rate limit cho đăng nhập và đăng ký. Nên user có thể spam tạo acc hoặc brute force
+  - **Phương hướng:** Tích hợp Rate Limit, captcha.
