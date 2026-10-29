@@ -25,6 +25,16 @@ Dự án cung cấp hệ thống cho nền tảng đấu giá trực tuyến đ�
 
 ---
 
+## Công nghệ sử dụng (Tech Stack)
+
+- **Ngôn ngữ lập trình:** Go (Golang) version 1.27+
+- **Cơ sở dữ liệu:** SQLite (sử dụng driver thuần Go `glebarez/sqlite` không phụ thuộc CGO)
+- **ORM:** GORM
+- **Xác thực & Bảo mật:** JSON Web Token (`golang-jwt/v5`) và thuật toán băm mật khẩu `bcrypt`
+- **Routing:** `net/http` ServeMux (Thư viện chuẩn của Go)
+- **Triển khai (Deployment):** Docker, Docker Compose
+- **CI/CD:** GitHub Actions
+  
 ## Cấu trúc thư mục (Directory Structure)
 
 Dự án được tổ chức tuân thủ cấu trúc thư mục tiêu chuẩn của Go:
