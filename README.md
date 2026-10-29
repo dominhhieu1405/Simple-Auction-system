@@ -174,7 +174,6 @@ Khi hệ thống gặp lỗi, API sẽ luôn trả về một **HTTP Status Code
 - Từ 100 users trở xuống, lượng ghi còn ít nên hầu như không phải chờ. Từ 1,000 users trở lên, request ghi dồn lại thành hàng đợi và lỗi tăng vọt (63% rồi 96%).
 
 ### Nhận xét
-
 - **<= 100 users:** ổn định, 0 lỗi, p95 < 100 ms.
 - **1,000 users:** quá tải. p95 = 5.3 s, lỗi 6.4%, toàn bộ là 500 ở POST bid.
 - **10,000 users:** gần sập. p95 = 15 s, 96% lượt bid lỗi, RAM tăng ~60 lần (31 MB -> 1.9 GB), FD 18.5k.
