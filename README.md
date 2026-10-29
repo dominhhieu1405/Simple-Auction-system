@@ -43,7 +43,18 @@ API cần JWT gửi header: `Authorization: Bearer <token>`
 | GET    | `/auctions/{id}/bids`   | Lịch sử đặt giá của phiên            | –               |
 | POST   | `/auctions/{id}/bids`   | Đặt giá                              | JWT             |
 
+## Quy ước Kỹ thuật (Dành cho Frontend / QA)
 
+**1. Định dạng dữ liệu (Data Types)**
+- **Tiền tệ:** Mọi trường liên quan đến tiền (`starting_price`, `min_increment`, `amount`) đều sử dụng số nguyên `int64` (không dùng số thực) để tránh sai số.
+- **Thời gian:** Trường `end_time` và các trường thời gian trả về (`created_at`, `updated_at`) tuân thủ định dạng **RFC 3339 / ISO 8601** (VD: `2026-12-31T23:59:59+07:00`).
+
+**2. Định dạng Lỗi (Error Handling)**
+Khi có lỗi (400, 401, 403, 404, 409, 500), API luôn trả về HTTP Status Code tương ứng kèm một object JSON chuẩn mực:
+```json
+{
+  "error": "mô tả chi tiết lỗi"
+}
 ## Cách chạy
 
 Biến môi trường
