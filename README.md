@@ -75,7 +75,7 @@ Simple-Auction-System/
 
 ---
 
-## Quy ước Kỹ thuật (Dành cho Frontend / QA)
+## Quy ước Kỹ thuật 
 
 **1. Định dạng dữ liệu (Data Types)**
 - **Tiền tệ:** Mọi trường liên quan đến tiền (`starting_price`, `min_increment`, `amount`) đều sử dụng số nguyên `int64` (không dùng số thực) để đảm bảo độ chính xác tuyệt đối.
