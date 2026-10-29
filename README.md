@@ -112,7 +112,7 @@ Khi hệ thống gặp lỗi, API sẽ luôn trả về một **HTTP Status Code
 ---
 
 ## Test
-# 📊 Báo Cáo Kiểm Thử Hiệu Năng Hệ Thống (Load Testing Report)
+# Kết quả kiểm Thử Hiệu Năng Hệ Thống 
 
 Dưới đây là kết quả kiểm thử tải trên hệ thống Backend (Go + GORM + SQLite) cho 11 endpoint nghiệp vụ:
 
