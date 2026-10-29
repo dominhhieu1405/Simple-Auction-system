@@ -28,5 +28,5 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req)
 }
