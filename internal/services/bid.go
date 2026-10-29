@@ -32,6 +32,21 @@ type BidService interface {
 	) ([]models.Bid, error)
 }
 
+type bidService struct {
+	auctionRepository repositories.AuctionRepository
+	bidRepository     repositories.BidRepository
+}
+
+func NewBidService(
+	auctionRepository repositories.AuctionRepository,
+	bidRepository repositories.BidRepository,
+) BidService {
+	return &bidService{
+		auctionRepository: auctionRepository,
+		bidRepository:     bidRepository,
+	}
+} 
+
 func (service *bidService) GetBidsByAuctionID(
 	auctionID uint,
 ) ([]models.Bid, error) {
@@ -48,21 +63,6 @@ func (service *bidService) GetBidsByAuctionID(
 
 	return service.bidRepository.
 		GetBidsByAuctionID(auctionID)
-}
-
-type bidService struct {
-	auctionRepository repositories.AuctionRepository
-	bidRepository     repositories.BidRepository
-}
-
-func NewBidService(
-	auctionRepository repositories.AuctionRepository,
-	bidRepository repositories.BidRepository,
-) BidService {
-	return &bidService{
-		auctionRepository: auctionRepository,
-		bidRepository:     bidRepository,
-	}
 }
 
 func (service *bidService) PlaceBid(
