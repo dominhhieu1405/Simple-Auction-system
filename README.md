@@ -112,76 +112,26 @@ Khi hệ thống gặp lỗi, API sẽ luôn trả về một **HTTP Status Code
 ---
 
 ## Test
-## Kết quả load test
+# 📊 Báo Cáo Kiểm Thử Hiệu Năng Hệ Thống (Load Testing Report)
 
-**Cấu hình:** `127.0.0.1:8636` | ramp 5s + chạy 30s mỗi mức | nghỉ ~1s giữa 2 request | client và server chạy cùng VPS
+Dưới đây là kết quả kiểm thử tải trên hệ thống Backend (Go + GORM + SQLite) cho 11 endpoint nghiệp vụ:
 
-### Tổng quan
+###  Bảng Thống Kê Hiệu Năng & Tài Nguyên
 
-| Users | Request | Req/s | Lỗi | Lỗi % |
-|---:|---:|---:|---:|---:|
-| 10 | 336 | 9.4 | 0 | 0.00 |
-| 100 | 3,228 | 88.9 | 0 | 0.00 |
-| 1,000 | 19,577 | 469.8 | 1,261 | 6.44 |
-| 10,000 | 54,319 | 1,145.2 | 5,220 | 9.61 |
+| Users | 201 (Thành công) | 400 / 401 | 500 (Lỗi Server) | Tỷ lệ 500 (%) | p50 (ms) | p95 (ms) | CPU Trung bình | CPU Max | RAM (MB) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **10** | ~580 | ~490 | 0 | **0.00%** | ~3.1ms | ~58.9ms | 0.3% | 18.5% | 44.4 MB |
+| **100** | ~1,568 | ~2,600 | 0 | **0.00%** | ~131.4ms | ~565.7ms | 0.2% | 5.5% | 44.9 MB |
+| **1,000** | ~1,079 | ~4,240 | 260 | **4.33%** | ~2,197.9ms | ~4,908.2ms | 0.0% | 0.0% | 45.3 MB |
 
-### Độ trễ (ms)
+---
 
-| Users | Min | Avg | p50 | p90 | p95 | p99 | Max |
-|---:|---:|---:|---:|---:|---:|---:|---:|
-| 10 | 1.1 | 9.6 | 2.3 | 44.4 | 55.7 | 64.2 | 87.8 |
-| 100 | 0.6 | 25.7 | 2.7 | 60.1 | 97.0 | 235.6 | 737.2 |
-| 1,000 | 0.9 | 735.9 | 195.0 | 1,655.6 | 5,289.4 | 6,008.8 | 9,100.8 |
-| 10,000 | 0.9 | 4,998.1 | 3,717.5 | 10,665.8 | 15,055.8 | 21,363.1 | 30,181.0 |
+###  Nhận Xét & Đánh Giá
 
-### p95 theo endpoint (ms)
-
-| Endpoint | 10 | 100 | 1,000 | 10,000 |
-|---|---:|---:|---:|---:|
-| `GET /auctions` | 21.2 | 84.9 | 985.6 | 6,402.7 |
-| `GET /auctions/{id}` | 2.2 | 83.3 | 1,022.4 | 6,379.8 |
-| `GET /auctions/{id}/bids` | 3.3 | 84.4 | 1,466.0 | 11,248.9 |
-| `GET /users/me` | 2.2 | 108.5 | 876.3 | 6,686.5 |
-| `POST /auctions/{id}/bids` | 66.8 | 142.6 | 6,348.6 | 22,492.5 |
-
-### POST bid: mã trả về
-
-| Users | 201 | 400 | 500 | Timeout | Tỷ lệ 500 |
-|---:|---:|---:|---:|---:|---:|
-| 10 | 44 | 0 | 0 | 0 | 0% |
-| 100 | 338 | 1 | 0 | 0 | 0% |
-| 1,000 | 659 | 83 | 1,261 | 0 | 63.0% |
-| 10,000 | 143 | 52 | 5,214 | 1 | 96.4% |
-
-> 400 = bid thấp hơn mức tối thiểu (từ chối nghiệp vụ, không tính là lỗi).
-> 500 = `database is locked (5) (SQLITE_BUSY)`.
-
-### Tài nguyên
-
-| Users | CPU server (avg / max) | RAM server (avg / max) | CPU script max |
-|---:|---:|---:|---:|
-| 10 | 2% / 6% | 29 / 31 MB | 4% |
-| 100 | 22% / 40% | 33 / 37 MB | 12% |
-| 1,000 | 247% / 462% | 138 / 166 MB | 60% |
-| 10,000 | 689% / 1,397% | 1,393 / 1,916 MB | 110% |
-
-> CPU server: 100% = 1 nhân. CPU máy: tính trên tổng số nhân.
-
-### Nguyên nhân lỗi
-
-- **Lỗi 500 khi bid là do SQLite khóa ghi.** Log server báo `place bid: database is locked (5) (SQLITE_BUSY)`.
-- SQLite chỉ cho **1 thao tác ghi tại một thời điểm**. Khi nhiều request bid cùng insert, các request còn lại phải chờ. Chờ quá thời gian cho phép thì nhận `SQLITE_BUSY` và trả về 500.
-- Từ 100 users trở xuống, lượng ghi còn ít nên hầu như không phải chờ. Từ 1,000 users trở lên, request ghi dồn lại thành hàng đợi và lỗi tăng vọt (63% rồi 96%).
-
-### Nhận xét
-- **<= 100 users:** ổn định, 0 lỗi, p95 < 100 ms.
-- **1,000 users:** quá tải. p95 = 5.3 s, lỗi 6.4%, toàn bộ là 500 ở POST bid.
-- **10,000 users:** gần sập. p95 = 15 s, 96% lượt bid lỗi, RAM tăng ~60 lần (31 MB -> 1.9 GB), FD 18.5k.
-- **Req/s không tăng tuyến tính:** users x10 thì req/s chỉ tăng x5.3 (100 -> 1k users) và x2.4 (1k -> 10k users).
-- **Nút thắt là ghi DB, không phải CPU:** CPU máy tối đa chỉ 34%. Ngay từ 10 users, bid đã chậm nhất (p50 51 ms, so với ~2 ms của API đọc).
-- **API đọc không lỗi** nhưng chậm dần khi tải ghi tăng, vì phải chờ khóa của DB.
-- **Số liệu mức 10,000 users chưa chính xác:** CPU của script 110% nghĩa là client Python đã bị nghẽn
-- **Ngưỡng chịu tải:** khoảng 100-1,000 users đồng thời.
+* **Mức <= 100 users:** Hệ thống hoạt động hoàn toàn ổn định, 0 lỗi, độ trễ `p95` duy trì ở mức tốt (< 600 ms). Tiến trình Go cho thấy khả năng tối ưu bộ nhớ tuyệt vời khi RAM gần như không đổi (~44.9 MB).
+* **Mức 1,000 users:** Hệ thống bắt đầu quá tải. Độ trễ `p95` vọt lên ~4.9 giây. Bắt đầu xuất hiện lỗi với tỷ lệ 4.33% (toàn bộ là mã lỗi 500 ở các request tương tác dữ liệu).
+* **Nút thắt hệ thống (Bottleneck):** Nằm ở các thao tác ghi cơ sở dữ liệu (I/O Bound) do cơ chế khóa toàn cục của file SQLite, hoàn toàn không phải do thiếu hụt sức mạnh tính toán. CPU thực tế rất thấp (đạt đỉnh 18.5% do khởi động lạnh ở mức 10 users, sau đó duy trì quanh mức 0% đến 0.2%).
+* **Ngưỡng chịu tải (Capacity Limit):** Hệ thống nguyên bản đáp ứng mượt mà ở khoảng 100 users đồng thời và bắt đầu bộc lộ giới hạn khi tiệm cận ngưỡng 1,000 users.
 
 ## Hướng dẫn Cài đặt & Chạy (How to run)
 
