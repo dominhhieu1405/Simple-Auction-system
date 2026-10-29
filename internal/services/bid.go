@@ -45,19 +45,12 @@ func NewBidService(
 		auctionRepository: auctionRepository,
 		bidRepository:     bidRepository,
 	}
-} 
+}
 
 func (service *bidService) GetBidsByAuctionID(
 	auctionID uint,
 ) ([]models.Bid, error) {
-	_, err := service.auctionRepository.
-		GetAuctionByID(auctionID)
-
-	if errors.Is(err, repositories.ErrNotFound) {
-		return nil, ErrAuctionNotFound
-	}
-
-	if err != nil {
+	if _, err := findAuction(service.auctionRepository, auctionID); err != nil {
 		return nil, err
 	}
 
@@ -74,13 +67,7 @@ func (service *bidService) PlaceBid(
 		return nil, ErrInvalidBid
 	}
 
-	auction, err := service.auctionRepository.
-		GetAuctionByID(auctionID)
-
-	if errors.Is(err, repositories.ErrNotFound) {
-		return nil, ErrAuctionNotFound
-	}
-
+	auction, err := findAuction(service.auctionRepository, auctionID)
 	if err != nil {
 		return nil, err
 	}

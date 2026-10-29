@@ -7,7 +7,7 @@ Dự án cung cấp hệ thống cho nền tảng đấu giá trực tuyến đ�
 ## Nghiệp vụ (Business Logic)
 
 **1. Tài khoản (Authentication)**
-- Người dùng đăng ký bằng username (3–32 ký tự, duy nhất) và password (6–72 kí tự).
+- Người dùng đăng ký bằng username (3-32 ký tự, duy nhất) và password (6-72 kí tự).
 - Đăng nhập thành công sẽ nhận được thẻ JWT. Token này dùng cho các API cần xác thực và có hiệu lực trong 24 giờ.
 
 **2. Phiên đấu giá (Auctions)**
@@ -61,16 +61,16 @@ Simple-Auction-System/
 
 | Method | Path | Mô tả chức năng | Xác thực |
 | :--- | :--- | :--- | :--- |
-| **POST** | `/auth/register` | Đăng ký tài khoản mới | – |
-| **POST** | `/auth/login` | Đăng nhập, nhận chuỗi JWT | – |
+| **POST** | `/auth/register` | Đăng ký tài khoản mới | - |
+| **POST** | `/auth/login` | Đăng nhập, nhận chuỗi JWT | - |
 | **GET** | `/users/me` | Lấy thông tin tài khoản đang đăng nhập | JWT |
 | **GET** | `/users/me/bids` | Xem lịch sử các lượt đặt giá của bản thân | JWT |
-| **GET** | `/auctions` | Xem danh sách tất cả phiên đấu giá | – |
-| **GET** | `/auctions/{id}` | Xem thông tin chi tiết một phiên đấu giá | – |
+| **GET** | `/auctions` | Xem danh sách tất cả phiên đấu giá | - |
+| **GET** | `/auctions/{id}` | Xem thông tin chi tiết một phiên đấu giá | - |
 | **POST** | `/auctions` | Tạo phiên đấu giá sản phẩm mới | JWT |
 | **DELETE** | `/auctions/{id}` | Xóa phiên (chỉ khi chưa có ai trả giá) | JWT (Chủ phiên) |
 | **POST** | `/auctions/{id}/close` | Đóng phiên, chốt kết quả và người thắng | JWT (Chủ phiên) |
-| **GET** | `/auctions/{id}/bids` | Lấy lịch sử các lượt đặt giá của một phiên | – |
+| **GET** | `/auctions/{id}/bids` | Lấy lịch sử các lượt đặt giá của một phiên | - |
 | **POST** | `/auctions/{id}/bids` | Đặt giá mới cho một phiên | JWT |
 
 ---

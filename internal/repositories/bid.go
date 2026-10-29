@@ -16,20 +16,6 @@ type BidRepository interface {
 	GetBidsByUserID(userID uint) ([]models.Bid, error)
 }
 
-func (repository *bidRepository) GetBidsByAuctionID(
-	auctionID uint,
-) ([]models.Bid, error) {
-	bids := make([]models.Bid, 0)
-
-	err := repository.database.
-		Where("auction_id = ?", auctionID).
-		Order("created_at DESC").
-		Find(&bids).
-		Error
-
-	return bids, err
-}
-
 type bidRepository struct {
 	database *gorm.DB
 }
@@ -91,6 +77,20 @@ func (repository *bidRepository) GetBidsByUserID(
 
 	err := repository.database.
 		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&bids).
+		Error
+
+	return bids, err
+}
+
+func (repository *bidRepository) GetBidsByAuctionID(
+	auctionID uint,
+) ([]models.Bid, error) {
+	bids := make([]models.Bid, 0)
+
+	err := repository.database.
+		Where("auction_id = ?", auctionID).
 		Order("created_at DESC").
 		Find(&bids).
 		Error

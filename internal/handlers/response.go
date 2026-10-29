@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 )
 
 type MessageResponse struct {
@@ -28,5 +29,10 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-	err := json.NewDecoder(r.Body).Decode(&req)
+	return json.NewDecoder(r.Body).Decode(dst)
+}
+
+func parseID(r *http.Request) (uint, bool) {
+	id, err := strconv.ParseUint(r.PathValue("id"), 10, 64)
+	return uint(id), err == nil && id != 0
 }

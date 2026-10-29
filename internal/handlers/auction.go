@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"simple-auction-system/internal/middleware"
@@ -49,32 +48,16 @@ type CreateAuctionRequest struct {
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /auctions [post]
-func (handler *AuctionHandler) CreateAuction(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
+func (handler *AuctionHandler) CreateAuction(writer http.ResponseWriter, request *http.Request) {
 	userID, ok := middleware.GetUserID(request)
 	if !ok {
-		writeError(
-			writer,
-			http.StatusUnauthorized,
-			"unauthorized",
-		)
+		writeError(writer, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var requestData CreateAuctionRequest
-
-	if err := decodeJSON(
-		writer,
-		request,
-		&requestData,
-	); err != nil {
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			"invalid request payload",
-		)
+	if err := decodeJSON(writer, request, &requestData); err != nil {
+		writeError(writer, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 
@@ -88,30 +71,14 @@ func (handler *AuctionHandler) CreateAuction(
 	}
 
 	err := handler.service.CreateAuction(&auction)
-
 	switch {
 	case err == nil:
-		writeJSON(
-			writer,
-			http.StatusCreated,
-			auction,
-		)
-
+		writeJSON(writer, http.StatusCreated, auction)
 	case errors.Is(err, services.ErrInvalidAuction):
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusBadRequest, err.Error())
 	default:
 		log.Printf("create auction: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 	}
 }
 
@@ -123,27 +90,14 @@ func (handler *AuctionHandler) CreateAuction(
 // @Success 200 {array} models.Auction
 // @Failure 500 {object} ErrorResponse
 // @Router /auctions [get]
-func (handler *AuctionHandler) GetAllAuctions(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
+func (handler *AuctionHandler) GetAllAuctions(writer http.ResponseWriter, request *http.Request) {
 	auctions, err := handler.service.GetAllAuctions()
 	if err != nil {
 		log.Printf("get auctions: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 		return
 	}
-
-	writeJSON(
-		writer,
-		http.StatusOK,
-		auctions,
-	)
+	writeJSON(writer, http.StatusOK, auctions)
 }
 
 // GetAuctionByID lấy chi tiết phiên đấu giá.
@@ -157,47 +111,22 @@ func (handler *AuctionHandler) GetAllAuctions(
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /auctions/{id} [get]
-func (handler *AuctionHandler) GetAuctionByID(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	idText := request.PathValue("id")
-
-	id, err := strconv.ParseUint(idText, 10, 64)
-	if err != nil || id == 0 {
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			"invalid auction id",
-		)
+func (handler *AuctionHandler) GetAuctionByID(writer http.ResponseWriter, request *http.Request) {
+	id, ok := parseID(request)
+	if !ok {
+		writeError(writer, http.StatusBadRequest, "invalid auction id")
 		return
 	}
 
-	auction, err := handler.service.GetAuctionByID(uint(id))
-
+	auction, err := handler.service.GetAuctionByID(id)
 	switch {
 	case err == nil:
-		writeJSON(
-			writer,
-			http.StatusOK,
-			auction,
-		)
-
+		writeJSON(writer, http.StatusOK, auction)
 	case errors.Is(err, services.ErrAuctionNotFound):
-		writeError(
-			writer,
-			http.StatusNotFound,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusNotFound, err.Error())
 	default:
 		log.Printf("get auction: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 	}
 }
 
@@ -216,76 +145,32 @@ func (handler *AuctionHandler) GetAuctionByID(
 // @Failure 409 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /auctions/{id} [delete]
-func (handler *AuctionHandler) DeleteAuction(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
+func (handler *AuctionHandler) DeleteAuction(writer http.ResponseWriter, request *http.Request) {
 	userID, ok := middleware.GetUserID(request)
 	if !ok {
-		writeError(
-			writer,
-			http.StatusUnauthorized,
-			"unauthorized",
-		)
+		writeError(writer, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	idText := request.PathValue("id")
-
-	id, err := strconv.ParseUint(idText, 10, 64)
-	if err != nil || id == 0 {
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			"invalid auction id",
-		)
+	id, ok := parseID(request)
+	if !ok {
+		writeError(writer, http.StatusBadRequest, "invalid auction id")
 		return
 	}
 
-	err = handler.service.DeleteAuction(
-		uint(id),
-		userID,
-	)
-
+	err := handler.service.DeleteAuction(id, userID)
 	switch {
 	case err == nil:
-		writeJSON(
-			writer,
-			http.StatusOK,
-			MessageResponse{
-				Message: "auction deleted successfully",
-			},
-		)
-
+		writeJSON(writer, http.StatusOK, MessageResponse{Message: "auction deleted successfully"})
 	case errors.Is(err, services.ErrAuctionNotFound):
-		writeError(
-			writer,
-			http.StatusNotFound,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusNotFound, err.Error())
 	case errors.Is(err, services.ErrNotAuctionOwner):
-		writeError(
-			writer,
-			http.StatusForbidden,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusForbidden, err.Error())
 	case errors.Is(err, services.ErrAuctionHasBids):
-		writeError(
-			writer,
-			http.StatusConflict,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusConflict, err.Error())
 	default:
 		log.Printf("delete auction: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 	}
 }
 
@@ -304,80 +189,31 @@ func (handler *AuctionHandler) DeleteAuction(
 // @Failure 409 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /auctions/{id}/close [post]
-func (handler *AuctionHandler) CloseAuction(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
+func (handler *AuctionHandler) CloseAuction(writer http.ResponseWriter, request *http.Request) {
 	userID, ok := middleware.GetUserID(request)
 	if !ok {
-		writeError(
-			writer,
-			http.StatusUnauthorized,
-			"unauthorized",
-		)
+		writeError(writer, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	idText := request.PathValue("id")
-
-	id, err := strconv.ParseUint(idText, 10, 64)
-	if err != nil || id == 0 {
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			"invalid auction id",
-		)
+	id, ok := parseID(request)
+	if !ok {
+		writeError(writer, http.StatusBadRequest, "invalid auction id")
 		return
 	}
 
-	auction, winningBid, err :=
-		handler.service.CloseAuction(
-			uint(id),
-			userID,
-		)
-
+	auction, winningBid, err := handler.service.CloseAuction(id, userID)
 	switch {
 	case err == nil:
-		writeJSON(
-			writer,
-			http.StatusOK,
-			CloseAuctionResponse{
-				Auction:    auction,
-				WinningBid: winningBid,
-			},
-		)
-
+		writeJSON(writer, http.StatusOK, CloseAuctionResponse{Auction: auction, WinningBid: winningBid})
 	case errors.Is(err, services.ErrAuctionNotFound):
-		writeError(
-			writer,
-			http.StatusNotFound,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusNotFound, err.Error())
 	case errors.Is(err, services.ErrNotAuctionOwner):
-		writeError(
-			writer,
-			http.StatusForbidden,
-			err.Error(),
-		)
-
-	case errors.Is(
-		err,
-		services.ErrAuctionAlreadyClosed,
-	):
-		writeError(
-			writer,
-			http.StatusConflict,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusForbidden, err.Error())
+	case errors.Is(err, services.ErrAuctionAlreadyClosed):
+		writeError(writer, http.StatusConflict, err.Error())
 	default:
 		log.Printf("close auction: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 	}
 }

@@ -92,58 +92,20 @@ func main() {
 	// Đăng ký các endpoints
 	mux.HandleFunc("POST /api/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
-	mux.Handle(
-		"GET /api/users/me",
-		middleware.RequireAuth(authService)(
-			http.HandlerFunc(authHandler.Me),
-		),
-	)
+	protect := func(h http.HandlerFunc) http.Handler {
+		return middleware.RequireAuth(authService)(h)
+	}
 
-	mux.Handle(
-		"POST /api/auctions",
-		middleware.RequireAuth(authService)(
-			http.HandlerFunc(auctionHandler.CreateAuction),
-		),
-	)
-	mux.HandleFunc(
-		"GET /api/auctions",
-		auctionHandler.GetAllAuctions,
-	)
-	mux.HandleFunc(
-		"GET /api/auctions/{id}",
-		auctionHandler.GetAuctionByID,
-	)
-	mux.Handle(
-		"POST /api/auctions/{id}/bids",
-		middleware.RequireAuth(authService)(
-			http.HandlerFunc(bidHandler.PlaceBid),
-		),
-	)
-	mux.HandleFunc(
-		"GET /api/auctions/{id}/bids",
-		bidHandler.GetBidsByAuctionID,
-	)
-	mux.Handle(
-		"POST /api/auctions/{id}/close",
-		middleware.RequireAuth(authService)(
-			http.HandlerFunc(auctionHandler.CloseAuction),
-		),
-	)
-	mux.Handle(
-		"DELETE /api/auctions/{id}",
-		middleware.RequireAuth(authService)(
-			http.HandlerFunc(auctionHandler.DeleteAuction),
-		),
-	)
+	mux.Handle("GET /api/users/me", protect(authHandler.Me))
+	mux.Handle("GET /api/users/me/bids", protect(bidHandler.GetCurrentUserBids))
+	mux.HandleFunc("GET /api/auctions", auctionHandler.GetAllAuctions)
+	mux.Handle("POST /api/auctions", protect(auctionHandler.CreateAuction))
+	mux.HandleFunc("GET /api/auctions/{id}", auctionHandler.GetAuctionByID)
+	mux.Handle("DELETE /api/auctions/{id}", protect(auctionHandler.DeleteAuction))
+	mux.Handle("POST /api/auctions/{id}/close", protect(auctionHandler.CloseAuction))
+	mux.Handle("POST /api/auctions/{id}/bids", protect(bidHandler.PlaceBid))
+	mux.HandleFunc("GET /api/auctions/{id}/bids", bidHandler.GetBidsByAuctionID)
 
-	mux.Handle(
-		"GET /api/users/me/bids",
-		middleware.RequireAuth(authService)(
-			http.HandlerFunc(
-				bidHandler.GetCurrentUserBids,
-			),
-		),
-	)
 	// 5. Khởi chạy Server
 	fmt.Println("Server is running on port " + cfg.Addr + " ...")
 	if err := http.ListenAndServe(cfg.Addr, mux); err != nil {

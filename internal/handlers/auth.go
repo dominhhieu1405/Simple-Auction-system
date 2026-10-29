@@ -117,10 +117,6 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		log.Printf("get current user: %v", err)
-		writeError(
-			w,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
 }

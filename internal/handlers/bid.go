@@ -4,8 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"strconv"
-
 	"simple-auction-system/internal/middleware"
 	"simple-auction-system/internal/services"
 )
@@ -42,94 +40,39 @@ type PlaceBidRequest struct {
 // @Failure 409 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /auctions/{id}/bids [post]
-func (handler *BidHandler) PlaceBid(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
+func (handler *BidHandler) PlaceBid(writer http.ResponseWriter, request *http.Request) {
 	userID, ok := middleware.GetUserID(request)
 	if !ok {
-		writeError(
-			writer,
-			http.StatusUnauthorized,
-			"unauthorized",
-		)
+		writeError(writer, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	idText := request.PathValue("id")
-
-	id, err := strconv.ParseUint(idText, 10, 64)
-	if err != nil || id == 0 {
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			"invalid auction id",
-		)
+	id, ok := parseID(request)
+	if !ok {
+		writeError(writer, http.StatusBadRequest, "invalid auction id")
 		return
 	}
 
 	var requestData PlaceBidRequest
-
-	if err := decodeJSON(
-		writer,
-		request,
-		&requestData,
-	); err != nil {
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			"invalid request payload",
-		)
+	if err := decodeJSON(writer, request, &requestData); err != nil {
+		writeError(writer, http.StatusBadRequest, "invalid request payload")
 		return
 	}
 
-	bid, err := handler.service.PlaceBid(
-		uint(id),
-		userID,
-		requestData.Amount,
-	)
-
+	bid, err := handler.service.PlaceBid(id, userID, requestData.Amount)
 	switch {
 	case err == nil:
-		writeJSON(
-			writer,
-			http.StatusCreated,
-			bid,
-		)
-
-	case errors.Is(err, services.ErrInvalidBid),
-		errors.Is(err, services.ErrBidTooLow):
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			err.Error(),
-		)
-
+		writeJSON(writer, http.StatusCreated, bid)
+	case errors.Is(err, services.ErrInvalidBid), errors.Is(err, services.ErrBidTooLow):
+		writeError(writer, http.StatusBadRequest, err.Error())
 	case errors.Is(err, services.ErrAuctionNotFound):
-		writeError(
-			writer,
-			http.StatusNotFound,
-			err.Error(),
-		)
-
-	case errors.Is(err, services.ErrAuctionNotActive),
-		errors.Is(err, services.ErrAuctionEnded):
-		writeError(
-			writer,
-			http.StatusConflict,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusNotFound, err.Error())
+	case errors.Is(err, services.ErrAuctionNotActive), errors.Is(err, services.ErrAuctionEnded):
+		writeError(writer, http.StatusConflict, err.Error())
 	default:
 		log.Printf("place bid: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 	}
-
 }
 
 // GetBidsByAuctionID lấy lịch sử đặt giá.
@@ -143,48 +86,22 @@ func (handler *BidHandler) PlaceBid(
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /auctions/{id}/bids [get]
-func (handler *BidHandler) GetBidsByAuctionID(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	idText := request.PathValue("id")
-
-	id, err := strconv.ParseUint(idText, 10, 64)
-	if err != nil || id == 0 {
-		writeError(
-			writer,
-			http.StatusBadRequest,
-			"invalid auction id",
-		)
+func (handler *BidHandler) GetBidsByAuctionID(writer http.ResponseWriter, request *http.Request) {
+	id, ok := parseID(request)
+	if !ok {
+		writeError(writer, http.StatusBadRequest, "invalid auction id")
 		return
 	}
 
-	bids, err := handler.service.
-		GetBidsByAuctionID(uint(id))
-
+	bids, err := handler.service.GetBidsByAuctionID(id)
 	switch {
 	case err == nil:
-		writeJSON(
-			writer,
-			http.StatusOK,
-			bids,
-		)
-
+		writeJSON(writer, http.StatusOK, bids)
 	case errors.Is(err, services.ErrAuctionNotFound):
-		writeError(
-			writer,
-			http.StatusNotFound,
-			err.Error(),
-		)
-
+		writeError(writer, http.StatusNotFound, err.Error())
 	default:
 		log.Printf("get auction bids: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 	}
 }
 
@@ -198,37 +115,18 @@ func (handler *BidHandler) GetBidsByAuctionID(
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /users/me/bids [get]
-func (handler *BidHandler) GetCurrentUserBids(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
+func (handler *BidHandler) GetCurrentUserBids(writer http.ResponseWriter, request *http.Request) {
 	userID, ok := middleware.GetUserID(request)
 	if !ok {
-		writeError(
-			writer,
-			http.StatusUnauthorized,
-			"unauthorized",
-		)
+		writeError(writer, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	bids, err := handler.service.
-		GetBidsByUserID(userID)
-
+	bids, err := handler.service.GetBidsByUserID(userID)
 	if err != nil {
 		log.Printf("get current user bids: %v", err)
-
-		writeError(
-			writer,
-			http.StatusInternalServerError,
-			"internal server error",
-		)
+		writeError(writer, http.StatusInternalServerError, "internal server error")
 		return
 	}
-
-	writeJSON(
-		writer,
-		http.StatusOK,
-		bids,
-	)
+	writeJSON(writer, http.StatusOK, bids)
 }

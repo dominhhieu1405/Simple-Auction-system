@@ -21,19 +21,8 @@ func RequireAuth(
 			w http.ResponseWriter,
 			r *http.Request,
 		) {
-			// 1. Lấy Authorization header
-			authHeader := r.Header.Get("Authorization")
-
-			// 2. Header phải có dạng: Bearer <token>
-			if !strings.HasPrefix(authHeader, "Bearer ") {
-				unauthorized(w)
-				return
-			}
-
-			// 3. Bỏ phần "Bearer " để lấy JWT
-			token := strings.TrimPrefix(authHeader, "Bearer ")
-
-			if token == "" {
+			token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+			if !ok || token == "" {
 				unauthorized(w)
 				return
 			}

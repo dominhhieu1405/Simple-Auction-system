@@ -127,14 +127,8 @@ func (s *authService) ParseToken(tokenStr string) (*Claims, error) {
 
 func (s *authService) GetUserByID(id uint) (*models.User, error) {
 	user, err := s.repo.GetUserByID(id)
-
 	if errors.Is(err, repositories.ErrNotFound) {
 		return nil, ErrUserNotFound
 	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
+	return user, err
 }

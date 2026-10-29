@@ -41,6 +41,14 @@ func NewAuctionService(
 	}
 }
 
+func findAuction(repo repositories.AuctionRepository, id uint) (*models.Auction, error) {
+	auction, err := repo.GetAuctionByID(id)
+	if errors.Is(err, repositories.ErrNotFound) {
+		return nil, ErrAuctionNotFound
+	}
+	return auction, err
+}
+
 func (service *auctionService) CreateAuction(
 	auction *models.Auction,
 ) error {
@@ -89,30 +97,14 @@ func (service *auctionService) GetAllAuctions() (
 func (service *auctionService) GetAuctionByID(
 	id uint,
 ) (*models.Auction, error) {
-	auction, err := service.repository.GetAuctionByID(id)
-
-	if errors.Is(err, repositories.ErrNotFound) {
-		return nil, ErrAuctionNotFound
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return auction, nil
+	return findAuction(service.repository, id)
 }
 
 func (service *auctionService) DeleteAuction(
 	auctionID uint,
 	userID uint,
 ) error {
-	auction, err := service.repository.
-		GetAuctionByID(auctionID)
-
-	if errors.Is(err, repositories.ErrNotFound) {
-		return ErrAuctionNotFound
-	}
-
+	auction, err := findAuction(service.repository, auctionID)
 	if err != nil {
 		return err
 	}
@@ -139,13 +131,7 @@ func (service *auctionService) CloseAuction(
 	auctionID uint,
 	userID uint,
 ) (*models.Auction, *models.Bid, error) {
-	auction, err := service.repository.
-		GetAuctionByID(auctionID)
-
-	if errors.Is(err, repositories.ErrNotFound) {
-		return nil, nil, ErrAuctionNotFound
-	}
-
+	auction, err := findAuction(service.repository, auctionID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -158,12 +144,8 @@ func (service *auctionService) CloseAuction(
 		return nil, nil, ErrAuctionAlreadyClosed
 	}
 
-	winningBid, err := service.bidRepository.
-		GetHighestBid(auctionID)
-
-	if errors.Is(err, repositories.ErrNotFound) {
-		winningBid = nil
-	} else if err != nil {
+	winningBid, err := service.bidRepository.GetHighestBid(auctionID)
+	if err != nil && !errors.Is(err, repositories.ErrNotFound) {
 		return nil, nil, err
 	}
 
