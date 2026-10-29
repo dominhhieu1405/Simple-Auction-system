@@ -143,3 +143,20 @@ go run .
 ```bash
 go test ./tests -v
 ```
+## Hạn chế và Phương hướng phát triển
+
+- **Hiệu năng và khả năng mở rộng dữ liệu:**
+  - **Hạn chế:** Các hàm lấy danh sách phiên hoặc lịch sử trả giá đang nạp toàn bộ bản ghi vào RAM rồi trả về một lần duy nhất. Khi dữ liệu tăng lớn, hệ thống đối mặt với nguy cơ tràn bộ nhớ (Out Of Memory) và nghẽn băng thông.
+  - **Phương hướng:** Triển khai cơ chế phân trang (*Pagination*) bằng các tham số `limit` và `offset`.
+
+- **Xử lý tranh chấp dữ liệu (Race Condition):**
+  - **Hạn chế:** Các request đặt giá đồng thời ở những giây cuối phiên có thể cùng đọc một mức giá cũ, gây xung đột hoặc lỗi khóa cơ sở dữ liệu trên SQLite.
+  - **Phương hướng:** Bọc toàn bộ logic kiểm tra và lưu giá mới vào trong Transaction của Database (`db.Transaction`) kết hợp cơ chế khóa dòng phù hợp.
+
+- **Rò rỉ tài nguyên do thiếu `context.Context`:**
+  - **Hạn chế:** Tầng Handlers hiện chỉ trích xuất `userID` rồi truyền các biến rời rạc xuống Service, bỏ qua *request Context*. Khi client ngắt kết nối đột ngột, các tiến trình ngầm vẫn tiếp tục chạy gây lãng phí tài nguyên.
+  - **Phương hướng:** Truyền trực tiếp `context.Context` xuống tận tầng Repository kết hợp cấu hình Timeout Middleware.
+
+- **Bảo mật và Quản lý phiên (Rate Limiting & JWT):**
+  - **Hạn chế:** Các API công khai như đăng nhập sử dụng hàm băm *bcrypt* nặng về CPU nhưng chưa có giới hạn tần suất gọi (*Rate Limiting*), dễ bị tấn công Brute-force. Cơ chế JWT Stateless hiện tại cũng không thể thu hồi token ngay khi người dùng đăng xuất.
+  - **Phương hướng:** Tích hợp Rate Limiter theo IP và xây dựng cơ chế quản lý danh sách token vô hiệu hóa (Blacklist).
